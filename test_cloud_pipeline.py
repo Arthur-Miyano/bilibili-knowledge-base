@@ -282,7 +282,10 @@ class CloudTests(unittest.TestCase):
             return [{"start": 0, "text": stem}]
         class Generator:
             def generate(self, title, lessons):
-                return {"course": {"title": title, "lessons": [{"title": item["title"], "summary": "S", "objectives": [], "concepts": [], "pitfalls": [], "source_id": item["source_id"]} for item in lessons]}}
+                return {"document": {"title": title, "description": ""}, "items": [
+                    {"source_id": item["source_id"], "kind": "claim", "title": item["part"], "body": "S", "evidence_ids": [item["evidence"][0]["id"]]}
+                    for item in lessons
+                ]}
         with patch.object(cloud, "_prepare_and_transcribe", side_effect=prepare):
             draft = cloud.make_draft(NoSubPages(), object(), Generator(), "BV1")
         self.assertEqual(seen, ["https://audio/one", "https://audio/two"])
@@ -321,33 +324,35 @@ class CloudTests(unittest.TestCase):
             seen["url"] = url
             seen["headers"] = headers
             seen["body"] = json.loads(body)
-            return {"candidates": [{"content": {"parts": [{"text": json.dumps({"course": {"title": "T", "lessons": [{"order": 99, "title": "L", "summary": "S", "objectives": [], "concepts": [], "pitfalls": [], "source_id": "x"}]}})}]}}]}
+            content = {"document": {"title": "T", "description": "D"}, "items": [{"source_id": "x", "kind": "definition", "title": "L", "body": "S", "evidence_ids": ["e:0"]}]}
+            return {"candidates": [{"content": {"parts": [{"text": json.dumps(content)}]}}]}
         draft = GeminiDraftGenerator(api_key="secret", transport=transport).generate("T", [{"title": "L", "transcript": [], "source_id": "x"}])
-        self.assertEqual(draft["course"]["title"], "T")
+        self.assertEqual(draft["document"]["title"], "T")
         self.assertEqual(seen["body"]["generationConfig"]["responseMimeType"], "application/json")
-        self.assertNotIn("order", seen["body"]["generationConfig"]["responseSchema"]["properties"]["course"]["properties"]["lessons"]["items"]["required"])
+        item_schema = seen["body"]["generationConfig"]["responseSchema"]["properties"]["items"]["items"]
+        self.assertIn("kind", item_schema["required"])
+        self.assertEqual(item_schema["properties"]["kind"]["enum"], ["claim", "definition", "procedure", "warning"])
+        self.assertNotIn("order", item_schema["required"])
         self.assertNotIn("key=", seen.get("url", ""))
         self.assertEqual(seen["headers"].get("x-goog-api-key"), "secret")
         with self.assertRaises(CloudError):
             validate_course_draft({"course": {"title": "", "lessons": []}})
-
     def test_openai_compatible_generator_contract(self):
         seen = {}
         def transport(url, method, headers, body):
             seen.update(url=url, method=method, headers=headers, body=json.loads(body))
-            content = {"course": {"title": "T", "lessons": [{"title": "L", "summary": "S", "objectives": [], "concepts": [], "pitfalls": [], "source_id": "x"}]}}
+            content = {"document": {"title": "T", "description": ""}, "items": [{"source_id": "x", "kind": "claim", "title": "L", "body": "S", "evidence_ids": ["e:0"]}]}
             return {"choices": [{"message": {"content": json.dumps(content)}}]}
         generator = OpenAIChatDraftGenerator(
             api_key="secret", model="deepseek-flash", base_url="https://api.deepseek.com",
             env_name="DEEPSEEK_API_KEY", service="DeepSeek", transport=transport,
         )
         draft = generator.generate("T", [{"title": "L", "transcript": [], "source_id": "x"}])
-        self.assertEqual(draft["course"]["title"], "T")
+        self.assertEqual(draft["document"]["title"], "T")
         self.assertEqual(seen["url"], "https://api.deepseek.com/chat/completions")
         self.assertEqual(seen["headers"]["Authorization"], "Bearer secret")
         self.assertEqual(seen["body"]["response_format"], {"type": "json_object"})
-        self.assertIn("source_id", seen["body"]["messages"][1]["content"])
-
+        self.assertIn("evidence_ids", seen["body"]["messages"][1]["content"])
     def test_missing_key_and_no_subtitle(self):
         old = os.environ.pop("GROQ_API_KEY", None)
         try:
@@ -367,7 +372,10 @@ class CloudTests(unittest.TestCase):
                 return [{"bvid": "BV1", "title": "T", "page": {"page": 1, "part": "L"}, "subtitle": [{"start": 0, "text": "x"}]}]
         class Generator:
             def generate(self, title, lessons):
-                return {"course": {"title": title, "lessons": lessons}}
+                return {"document": {"title": title, "description": ""}, "items": [
+                    {"source_id": item["source_id"], "kind": "claim", "title": item["part"], "body": "S", "evidence_ids": [item["evidence"][0]["id"]]}
+                    for item in lessons
+                ]}
         with tempfile.TemporaryDirectory() as directory:
             paths = __import__("course_publisher").publish(directory, make_draft(GoodSource(), object(), Generator(), "BV1"))
             self.assertTrue(paths)
@@ -561,7 +569,7 @@ class CloudTests(unittest.TestCase):
             def lessons(self, value):
                 return [{"bvid": "BV1", "title": "T", "page": {"page": 1, "part": "L"}, "subtitle": [], "audio_url": "https://audio"}]
         class Generator:
-            def generate(self, title, lessons): return {"course": {"title": title, "lessons": [{"title": "L", "summary": "S", "objectives": [], "concepts": [], "pitfalls": [], "source_id": lessons[0]["source_id"]}]}}
+            def generate(self, title, lessons): return {"document": {"title": title, "description": ""}, "items": [{"source_id": lessons[0]["source_id"], "kind": "claim", "title": "L", "body": "S", "evidence_ids": [lessons[0]["evidence"][0]["id"]]}]}
         def fake_prepare(source, transcriber, audio_source, workdir, stem):
             workdirs.append(workdir)
             return [{"start": 0, "text": "x"}]
@@ -610,5 +618,67 @@ class CloudTests(unittest.TestCase):
             }]}})
 
 
+
+    def test_make_knowledge_ir_binds_local_evidence_and_source_order(self):
+        cloud = __import__("cloud_pipeline")
+        seen = {}
+        class TwoPages(Source):
+            def lessons(self, value):
+                return [
+                    {"bvid": "BV1", "title": "课程", "page": {"page": 1, "part": "一"}, "subtitle": [{"start": 1, "end": 2, "text": "第一条"}]},
+                    {"bvid": "BV1", "title": "课程", "page": {"page": 2, "part": "二"}, "subtitle": [{"start": 3, "end": 4, "text": "第二条"}]},
+                ]
+        class Generator:
+            def generate(self, title, sources):
+                seen["sources"] = sources
+                return {"document": {"title": "IR 课程", "description": "D"}, "sources": [{"source_id": "fake"}], "evidence": [], "items": [
+                    {"source_id": sources[0]["source_id"], "kind": "definition", "title": "一", "body": "第一知识", "evidence_ids": [sources[0]["evidence"][0]["id"]]},
+                    {"source_id": sources[1]["source_id"], "kind": "warning", "title": "二", "body": "第二知识", "evidence_ids": [sources[1]["evidence"][0]["id"]]},
+                ]}
+        document = cloud.make_knowledge_ir(TwoPages(), object(), Generator(), "BV1")
+        self.assertEqual([item["source_id"] for item in document["sources"]], ["bilibili:BV1:1", "bilibili:BV1:2"])
+        self.assertEqual([item["url"] for item in document["sources"]], ["https://www.bilibili.com/video/BV1?p=1", "https://www.bilibili.com/video/BV1?p=2"])
+        self.assertEqual([item["text"] for item in document["evidence"]], ["第一条", "第二条"])
+        self.assertEqual([item["start"] for item in document["evidence"]], [1, 3])
+        self.assertEqual([item["source_id"] for item in seen["sources"]], ["bilibili:BV1:1", "bilibili:BV1:2"])
+        self.assertTrue(all("transcript" not in item for item in seen["sources"]))
+        self.assertTrue(all("evidence" in item for item in seen["sources"]))
+
+    def test_make_knowledge_ir_rejects_unknown_model_evidence(self):
+        cloud = __import__("cloud_pipeline")
+        class SourceWithEvidence(Source):
+            def lessons(self, value):
+                return [{"bvid": "BV1", "title": "课程", "page": {"page": 1, "part": "一"}, "subtitle": [{"start": 0, "text": "证据"}]}]
+        class Generator:
+            def generate(self, title, sources):
+                return {"document": {"title": "T", "description": ""}, "items": [{"source_id": sources[0]["source_id"], "kind": "claim", "title": "错", "body": "错", "evidence_ids": ["missing"]}]}
+        with self.assertRaisesRegex(CloudError, "Knowledge IR"):
+            cloud.make_knowledge_ir(SourceWithEvidence(), object(), Generator(), "BV1")
+
+    def test_make_knowledge_ir_rejects_malformed_source_structure(self):
+        cloud = __import__("cloud_pipeline")
+        class BadSource(Source):
+            def lessons(self, value):
+                return [{"bvid": "", "title": "课程", "page": {"page": "bad", "part": "一"}, "subtitle": [{"start": 0, "text": "证据"}]}]
+        with self.assertRaisesRegex(CloudError, "Knowledge IR"):
+            cloud.make_knowledge_ir(BadSource(), object(), object(), "BV1")
+
+    def test_make_draft_projects_ir_into_course_view(self):
+        cloud = __import__("cloud_pipeline")
+        class SourceWithPages(Source):
+            def lessons(self, value):
+                return [
+                    {"bvid": "BV1", "title": "课程", "page": {"page": 1, "part": "一"}, "subtitle": [{"start": 1, "text": "A"}]},
+                    {"bvid": "BV1", "title": "课程", "page": {"page": 2, "part": "二"}, "subtitle": [{"start": 2, "text": "B"}]},
+                ]
+        class Generator:
+            def generate(self, title, lessons):
+                return {"document": {"title": title, "description": ""}, "items": [
+                    {"source_id": item["source_id"], "kind": "claim", "title": item["part"], "body": "摘要", "evidence_ids": [item["evidence"][0]["id"]]}
+                    for item in lessons
+                ]}
+        draft = cloud.make_draft(SourceWithPages(), object(), Generator(), "BV1")
+        self.assertEqual([item["source_id"] for item in draft["course"]["lessons"]], ["bilibili:BV1:1", "bilibili:BV1:2"])
+        self.assertEqual([item["transcript"][0]["text"] for item in draft["course"]["lessons"]], ["A", "B"])
 if __name__ == "__main__":
     unittest.main()

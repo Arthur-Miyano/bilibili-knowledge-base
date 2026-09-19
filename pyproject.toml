@@ -21,7 +21,7 @@ classifiers = [
 bilibili = ["bilibili-api-python==17.4.2", "httpx>=0.27,<0.29"]
 
 [tool.setuptools]
-py-modules = ["cloud_pipeline", "course_publisher", "web_app"]
+py-modules = ["cloud_pipeline", "course_publisher", "web_app", "knowledge_ir"]
 
 [tool.setuptools.packages.find]
 include = ["web"]

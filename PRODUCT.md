@@ -20,7 +20,7 @@ delegated：静态 HTML、CSS、JavaScript 与 Python 标准库本地服务；�
 
 ## Positioning
 
-产品保留原始时间戳证据，由本地程序控制课次顺序和 Obsidian 写入安全；云端模型只负责识别和内容整理。
+产品保留原始时间戳证据，由本地程序控制课次顺序和 Obsidian 写入安全；云端模型只负责识别和内容整理。 规范知识层是 Knowledge IR，包含本地生成并绑定的 sources/evidence/items；Course View 与 Markdown 只是确定性投影，不是规范知识层。
 
 ## Operating Context
 

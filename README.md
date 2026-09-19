@@ -1,10 +1,11 @@
 # B站知识库
 
-一个不依赖前端框架的本地知识库工具：把 B 站视频的标题、字幕或音频整理成结构稳定的 Obsidian Markdown，并安全写入用户指定的 Vault。离线 JSON → Obsidian 主链路只使用 Python 标准库；云端语音识别使用 Groq Whisper，内容整理可选择 Gemini、DeepSeek 或 Kimi。
+一个不依赖前端框架的本地知识库工具：把 B 站视频的标题、字幕或音频整理成结构稳定的 Obsidian Markdown，并安全写入用户指定的 Vault。离线 JSON → Obsidian 主链路只使用 Python 标准库；云端语音识别使用 Groq Whisper，内容整理可选择 Gemini、DeepSeek 或 Kimi。 知识内容先进入带证据绑定的规范 Knowledge IR，再确定性投影为 Course View/Markdown；课程视图不是规范知识层。
 
 ## 能做什么
 
 - 本地 JSON 知识库发布：索引页、分 P 笔记、目录、前后笔记链接和时间轴。
+- Knowledge IR 由本地来源、证据和知识项组成；模型只提取并引用证据，Course View/Markdown 由本地渲染。
 - 重复发布幂等，保留 `## 我的笔记`；自动区被人工修改时拒绝覆盖。
 - 文件名清洗、Vault 路径边界、同目录临时文件原子替换。
 - B 站来源使用可选的 `bilibili-api-python==17.4.2` 进程内适配器，逐个分 P 读取字幕或音频地址，优先字幕。
