@@ -1,0 +1,30 @@
+{
+  "course": {
+    "id": "python-basics",
+    "title": "Python 入门示例",
+    "description": "离线演示：带时间戳材料发布为 Obsidian 课程。",
+    "objectives": ["理解变量与函数", "能够运行最小示例"],
+    "lessons": [
+      {
+        "order": 1,
+        "title": "变量与函数",
+        "source_id": "local:lesson-1",
+        "summary": "用函数组织可复用逻辑。",
+        "objectives": ["区分参数和返回值"],
+        "concepts": ["变量保存值", "函数通过 return 产生结果"],
+        "transcript": [
+          {"start": 0.0, "text": "今天介绍变量。"},
+          {"start": 12.5, "text": "接着把逻辑放进函数。"}
+        ]
+      },
+      {
+        "order": 2,
+        "title": "列表处理",
+        "source_id": "local:lesson-2",
+        "summary": "遍历列表并保留输入顺序。",
+        "concepts": ["for 循环"],
+        "transcript": [{"start": 3, "text": "列表可以逐项遍历。"}]
+      }
+    ]
+  }
+}

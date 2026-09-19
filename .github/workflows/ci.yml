@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }} · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install build tooling
+        run: python -m pip install --no-cache-dir "setuptools>=68"
+      - name: Run tests
+        shell: bash
+        run: python -m unittest -v
+      - name: Compile Python
+        run: python -m compileall -q .
+      - name: Check frontend syntax
+        run: node --check web/app.js
+      - name: Build wheel
+        run: python -m pip wheel --no-cache-dir --no-deps --no-build-isolation . -w wheelhouse-ci
+
+  bilibili-extra:
+    name: Bilibili extra wheel and entry smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install build tooling
+        run: python -m pip install --no-cache-dir "setuptools>=68"
+      - name: Build project wheel
+        run: python -m pip wheel --no-cache-dir --no-deps --no-build-isolation . -w wheelhouse-extra
+      - name: Install wheel with Bilibili extra
+        shell: bash
+        run: python -m pip install --no-cache-dir "wheelhouse-extra/$(basename wheelhouse-extra/*.whl)[bilibili]"
+      - name: Import adapter and smoke console entries
+        shell: bash
+        run: |
+          python -c "import bilibili_api; from bilibili_api.video import Video; print(Video.__name__)"
+          course-cloud --help
+          course-web --help

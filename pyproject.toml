@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bilibili-knowledge-base"
+version = "0.1.0"
+description = "B站知识库：本地整理 B 站内容并安全发布为 Obsidian 笔记"
+requires-python = ">=3.11"
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.14",
+]
+
+[project.optional-dependencies]
+bilibili = ["bilibili-api-python==17.4.2", "httpx>=0.27,<0.29"]
+
+[tool.setuptools]
+py-modules = ["cloud_pipeline", "course_publisher", "web_app"]
+
+[tool.setuptools.packages.find]
+include = ["web"]
+
+[tool.setuptools.package-data]
+web = ["*.html", "*.css", "*.js"]
+
+[project.scripts]
+course-cloud = "cloud_pipeline:main"
+course-web = "web_app:main"

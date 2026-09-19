@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="把 B 站视频整理并发布到 Obsidian Vault 的本地知识库工具">
+    <title>B站知识库 · 本地工作台</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="app-sidebar" aria-label="功能导航">
+        <a class="brand" href="#create" aria-label="B站知识库首页">
+          <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true">
+            <rect x="2" y="2" width="10" height="10" rx="2" fill="#4285f4" />
+            <rect x="16" y="2" width="10" height="10" rx="2" fill="#34a853" />
+            <rect x="2" y="16" width="10" height="10" rx="2" fill="#fbbc04" />
+            <rect x="16" y="16" width="10" height="10" rx="2" fill="#ea4335" />
+          </svg>
+          <span>B站知识库</span>
+        </a>
+
+        <nav class="feature-nav" aria-label="主要功能" role="tablist">
+          <button class="nav-item" type="button" role="tab" aria-selected="true" aria-controls="view-create" data-view-target="create">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4M8 13h8M8 17h5"/></svg>
+            <span><strong>创建知识库</strong><small>提交 B 站内容</small></span>
+          </button>
+          <button class="nav-item" type="button" role="tab" aria-selected="false" aria-controls="view-settings" data-view-target="settings" tabindex="-1">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+            <span><strong>模型与凭据</strong><small>选择具体模型</small></span>
+          </button>
+          <button class="nav-item" type="button" role="tab" aria-selected="false" aria-controls="view-status" data-view-target="status" tabindex="-1">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h4l2-5 4 10 2-5h4"/><path d="M4 5v14h16"/></svg>
+            <span><strong>运行状态</strong><small>依赖与隐私</small></span>
+          </button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <span class="local-dot" aria-hidden="true"></span>
+          <span><strong>仅本机运行</strong><small>凭据不会在浏览器中保存</small></span>
+        </div>
+      </aside>
+
+      <main class="main-shell">
+        <header class="page-bar">
+          <div>
+            <strong id="view-title">创建知识库</strong>
+            <span id="view-description">从 B 站内容生成 Obsidian 笔记</span>
+          </div>
+          <button class="text-button" type="button" data-view-link="status">查看运行状态</button>
+        </header>
+
+        <div class="view-stack">
+          <section class="app-view" id="view-create" role="tabpanel" data-view="create" aria-labelledby="page-title">
+            <div class="view-intro">
+              <h1 id="page-title">把 B 站内容整理进 Vault</h1>
+              <p>字幕优先、无字幕再识别，并保留原始时间戳。模型与 Key 可以在左侧“模型与凭据”中切换。</p>
+            </div>
+
+            <section class="pipeline" aria-labelledby="pipeline-title">
+              <h2 id="pipeline-title" class="sr-only">处理路径</h2>
+              <ol class="pipeline-list">
+                <li class="pipeline-step" data-step="source"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2"/></svg></span><span><strong>读取来源</strong><small>B 站视频与字幕</small></span></li>
+                <li class="pipeline-connector" aria-hidden="true"></li>
+                <li class="pipeline-step" data-step="cloud"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M5.5 14.5h9a3 3 0 0 0 .4-5.98A5 5 0 0 0 5.5 7.6a3.45 3.45 0 0 0 0 6.9Z"/></svg></span><span><strong>识别与整理</strong><small>保留证据时间戳</small></span></li>
+                <li class="pipeline-connector" aria-hidden="true"></li>
+                <li class="pipeline-step" data-step="vault"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M3.5 6.5h5l1.5 2h6.5v7h-13z"/><path d="M3.5 6.5v-1h5l1.5 2"/></svg></span><span><strong>写入 Vault</strong><small>生成知识库笔记</small></span></li>
+              </ol>
+            </section>
+
+            <form id="publish-form" class="task-surface" novalidate aria-busy="false">
+              <div class="surface-heading">
+                <div><h2>来源与发布位置</h2><p>填写两个字段即可开始，其余设置按需调整。</p></div>
+                <button class="secondary-button" type="button" data-view-link="settings">调整模型</button>
+              </div>
+              <div class="field-grid">
+                <div class="field field-wide">
+                  <label for="source">B 站 BV 号或链接</label>
+                  <input id="source" name="source" type="text" inputmode="url" autocomplete="url" spellcheck="false" maxlength="2048" placeholder="例如 BV1xx411c7mD 或 bilibili.com/video/BV…" aria-describedby="source-hint source-error" required>
+                  <p class="field-hint" id="source-hint">有字幕时直接使用；没有字幕才调用 Groq Whisper。</p>
+                  <p class="field-error" id="source-error" role="alert"></p>
+                </div>
+                <div class="field field-wide">
+                  <label for="vault">Obsidian Vault 路径</label>
+                  <input id="vault" name="vault" type="text" autocomplete="off" spellcheck="false" maxlength="4096" placeholder="例如 C:\Users\你\Documents\学习库" aria-describedby="vault-hint vault-error" required>
+                  <p class="field-hint" id="vault-hint">必须是本机已存在且可写的 Vault 文件夹；路径仅保存在当前浏览器。</p>
+                  <p class="field-error" id="vault-error" role="alert"></p>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="primary-button" id="publish-button" type="submit"><span class="button-label">生成并发布知识库笔记</span><span class="button-spinner" aria-hidden="true"></span></button>
+                <p>凭据只随当前请求发送给本机服务，不落盘。</p>
+              </div>
+            </form>
+
+            <section class="result-panel" id="result-section" aria-labelledby="result-title" aria-live="polite" aria-busy="false" hidden>
+              <div class="surface-heading"><div><h2 id="result-title">处理结果</h2><p id="result-message"></p></div><span class="result-mark" id="result-mark" aria-hidden="true"></span></div>
+              <ul class="result-files" id="result-files"></ul>
+              <div class="result-actions"><button class="secondary-button" id="copy-files-button" type="button" hidden>复制文件路径</button><span class="copy-feedback" id="copy-feedback" role="status" aria-live="polite"></span></div>
+              <div class="recovery" id="recovery" hidden></div>
+            </section>
+          </section>
+
+          <section class="app-view" id="view-settings" role="tabpanel" data-view="settings" aria-labelledby="settings-title" hidden>
+            <div class="view-intro"><h1 id="settings-title">模型与凭据</h1><p>语音识别与内容整理各自选用具体模型。B站优先使用官方扫码登录，留空 Key 时使用启动服务前配置的环境变量。</p></div>
+
+            <div class="settings-grid">
+              <section class="settings-surface" aria-labelledby="organizer-title">
+                <div class="surface-heading"><div><h2 id="organizer-title">知识整理模型</h2><p>把字幕整理为结构化课程笔记。</p></div></div>
+                <div class="field">
+                  <label for="text-provider">模型供应商</label>
+                  <select id="text-provider" name="text_provider" form="publish-form" aria-describedby="provider-hint">
+                    <option value="gemini">Google Gemini</option><option value="deepseek">DeepSeek</option><option value="kimi">Kimi / Moonshot</option>
+                  </select>
+                  <p class="field-hint" id="provider-hint">切换供应商后，下方会显示它实际支持的模型 ID。</p>
+                </div>
+                <div class="field">
+                  <label for="text-model">具体模型</label>
+                  <select id="text-model" name="text_model" form="publish-form" aria-describedby="text-model-hint text-model-error"></select>
+                  <p class="field-hint" id="text-model-hint" aria-live="polite"></p>
+                  <p class="field-error" id="text-model-error" role="alert"></p>
+                </div>
+              </section>
+
+              <section class="settings-surface" aria-labelledby="speech-title">
+                <div class="surface-heading"><div><h2 id="speech-title">语音识别模型</h2><p>仅在视频没有可用字幕时调用。</p></div></div>
+                <div class="field">
+                  <label for="groq-model">Groq Whisper 模型</label>
+                  <select id="groq-model" name="groq_model" form="publish-form" aria-describedby="groq-model-hint groq-model-error">
+                    <option value="whisper-large-v3-turbo">Whisper Large V3 Turbo · 更快更省</option><option value="whisper-large-v3">Whisper Large V3 · 更高精度</option>
+                  </select>
+                  <p class="field-hint" id="groq-model-hint">默认选择 Turbo；音频由本机 FFmpeg 预处理后发送。</p>
+                  <p class="field-error" id="groq-model-error" role="alert"></p>
+                </div>
+                <div class="model-note"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15Z"/><path d="M10 8v5M10 5.5v.5"/></svg><p>Groq Key 可以直接使用免费层，不需要另外申请 Whisper 模型。</p></div>
+              </section>
+            </div>
+
+            <section class="credentials-surface" aria-labelledby="credentials-title">
+              <div class="surface-heading"><div><h2 id="credentials-title">本次使用的凭据</h2><p>只显示当前整理供应商的 Key，避免填错服务。</p></div></div>
+              <section class="bilibili-login" aria-labelledby="bilibili-login-title">
+                <div class="surface-heading"><div><h3 id="bilibili-login-title">B站官方扫码登录</h3><p>优先使用官方二维码；扫码凭据仅保存在本次服务进程内存，重启后失效。</p></div></div>
+                <div class="bilibili-login-grid">
+                  <div class="bilibili-qr-frame" id="bilibili-qr-panel" hidden>
+                    <img id="bilibili-qr-code" class="bilibili-qr-code" alt="B站登录二维码">
+                  </div>
+                  <div>
+                    <p id="bilibili-login-status" class="bilibili-login-status" role="status" aria-live="polite" aria-atomic="true">尚未开始扫码。</p>
+                    <div class="settings-actions bilibili-login-actions">
+                      <button class="secondary-button" id="bilibili-login-start" type="button">开始扫码登录</button>
+                      <button class="secondary-button" id="bilibili-login-logout" type="button" hidden>退出并清除内存登录</button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <div class="credential-grid">
+                <div class="field provider-key" data-provider-key="gemini">
+                  <div class="label-row"><label for="gemini-api-key">GEMINI_API_KEY</label><span class="credential-state" data-credential-state="gemini-api-key">使用环境变量</span></div>
+                  <input id="gemini-api-key" name="gemini_api_key" form="publish-form" type="password" autocomplete="off" spellcheck="false" maxlength="8192" aria-describedby="gemini-api-key-hint gemini-api-key-error"><p class="field-hint" id="gemini-api-key-hint">Google AI Studio 创建的 API Key。</p><p class="field-error" id="gemini-api-key-error" role="alert"></p>
+                </div>
+                <div class="field provider-key" data-provider-key="deepseek" hidden>
+                  <div class="label-row"><label for="deepseek-api-key">DEEPSEEK_API_KEY</label><span class="credential-state" data-credential-state="deepseek-api-key">使用环境变量</span></div>
+                  <input id="deepseek-api-key" name="deepseek_api_key" form="publish-form" type="password" autocomplete="off" spellcheck="false" maxlength="8192" aria-describedby="deepseek-api-key-hint deepseek-api-key-error"><p class="field-hint" id="deepseek-api-key-hint">DeepSeek 开放平台创建的 API Key。</p><p class="field-error" id="deepseek-api-key-error" role="alert"></p>
+                </div>
+                <div class="field provider-key" data-provider-key="kimi" hidden>
+                  <div class="label-row"><label for="kimi-api-key">MOONSHOT_API_KEY</label><span class="credential-state" data-credential-state="kimi-api-key">使用环境变量</span></div>
+                  <input id="kimi-api-key" name="kimi_api_key" form="publish-form" type="password" autocomplete="off" spellcheck="false" maxlength="8192" aria-describedby="kimi-api-key-hint kimi-api-key-error"><p class="field-hint" id="kimi-api-key-hint">Kimi 开放平台创建的 Moonshot API Key。</p><p class="field-error" id="kimi-api-key-error" role="alert"></p>
+                </div>
+                <div class="field">
+                  <div class="label-row"><label for="groq-api-key">GROQ_API_KEY</label><span class="credential-state" data-credential-state="groq-api-key">使用环境变量</span></div>
+                  <input id="groq-api-key" name="groq_api_key" form="publish-form" type="password" autocomplete="off" spellcheck="false" maxlength="8192" aria-describedby="groq-api-key-hint groq-api-key-error"><p class="field-hint" id="groq-api-key-hint">仅在视频没有字幕时使用。</p><p class="field-error" id="groq-api-key-error" role="alert"></p>
+                </div>
+                <div class="field credential-wide">
+                  <div class="label-row"><label for="bilibili-cookie">BILIBILI_COOKIE（手动备用）</label><span class="credential-state" data-credential-state="bilibili-cookie">使用环境变量</span></div>
+                  <input id="bilibili-cookie" name="bilibili_cookie" form="publish-form" type="password" autocomplete="off" spellcheck="false" maxlength="8192" aria-describedby="bilibili-cookie-hint bilibili-cookie-error"><p class="field-hint" id="bilibili-cookie-hint">扫码不可用或 B 站返回 412 时可填写，只用于 B 站官方 API；不会保存。</p><p class="field-error" id="bilibili-cookie-error" role="alert"></p>
+                </div>
+              </div>
+              <div class="settings-actions"><button class="primary-button compact-action" type="button" data-view-link="create">完成设置，返回创建</button></div>
+            </section>
+          </section>
+
+          <section class="app-view" id="view-status" role="tabpanel" data-view="status" aria-labelledby="status-title" hidden>
+            <div class="view-intro"><h1 id="status-title">运行状态</h1><p>这里只显示是否可用，不读取或展示任何 Key、Cookie 内容。</p></div>
+            <section class="status-surface" aria-labelledby="readiness-title">
+              <div class="surface-heading"><div><h2 id="readiness-title">本机与云端连接</h2><p>至少配置一个知识整理供应商即可开始。</p></div><span id="status-summary" class="status-summary">检查中…</span></div>
+              <ul class="status-list" id="status-list">
+                <li class="status-item" data-status="ffmpeg"><span class="status-dot" aria-hidden="true"></span><span><strong>FFmpeg</strong><small>音频预处理</small></span><span class="status-value">检查中…</span></li>
+                <li class="status-item" data-status="bilibili_api"><span class="status-dot" aria-hidden="true"></span><span><strong>B站适配器</strong><small>元数据、字幕与音频地址</small></span><span class="status-value">检查中…</span></li>
+                <li class="status-item" data-status="groq"><span class="status-dot" aria-hidden="true"></span><span><strong>Groq Whisper</strong><small>无字幕时语音识别</small></span><span class="status-value">检查中…</span></li>
+                <li class="status-item" data-status="gemini"><span class="status-dot" aria-hidden="true"></span><span><strong>Google Gemini</strong><small>知识结构化整理</small></span><span class="status-value">检查中…</span></li>
+                <li class="status-item" data-status="deepseek"><span class="status-dot" aria-hidden="true"></span><span><strong>DeepSeek</strong><small>知识结构化整理</small></span><span class="status-value">检查中…</span></li>
+                <li class="status-item" data-status="kimi"><span class="status-dot" aria-hidden="true"></span><span><strong>Kimi / Moonshot</strong><small>知识结构化整理</small></span><span class="status-value">检查中…</span></li>
+              </ul>
+            </section>
+            <section class="privacy-surface" aria-labelledby="privacy-title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><div><h2 id="privacy-title">隐私与发送范围</h2><p>模型 Key、手动 Cookie 和扫码登录凭据不会写入浏览器或文件；扫码凭据只保存在本次 Python 服务进程内存，重启即失效。字幕会发送给你当前选择的 Gemini、DeepSeek 或 Kimi；无字幕音频会发送给 Groq。B站请求只发往官方 API，CDN 下载不会携带 Cookie。</p></div></section>
+          </section>
+        </div>
+
+        <noscript><p class="noscript">需要启用 JavaScript 才能使用 B站知识库本地面板。</p></noscript>
+        <footer class="footer">B站知识库 · 本地开源工具 · 不承诺外部服务的永久免费额度</footer>
+      </main>
+    </div>
+  </body>
+</html>
